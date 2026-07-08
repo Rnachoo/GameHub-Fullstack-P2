@@ -1,6 +1,5 @@
 package com.category.services;
 
-import com.category.CategoryServiceImpl;
 import com.category.exceptions.CategoryException;
 import com.category.models.Category;
 import com.category.models.dtos.CategoryDetalleDTO;

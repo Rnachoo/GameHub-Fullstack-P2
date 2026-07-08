@@ -1,5 +1,6 @@
 package com.product.controllers;
 
+import com.product.assemblers.ProductModelAssembler;
 import com.product.models.dtos.ProductRequestDTO;
 import com.product.models.dtos.ProductResponseDTO;
 import com.product.services.ProductService;
@@ -12,6 +13,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -31,6 +34,11 @@ public class ProductController {
     @Autowired
     private ProductService productService;
 
+    @Autowired
+    private ProductModelAssembler productModelAssembler;
+
+
+    //Listar todos los productos
     @GetMapping
     @Operation(
             summary = "Listado de productos",
@@ -38,12 +46,24 @@ public class ProductController {
     )
     @ApiResponse(
             responseCode = "200",
-            description = "Operación exitosa"
+            description = "Operación exitosa",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = ProductResponseDTO.class)
+            )
     )
-    public ResponseEntity<List<ProductResponseDTO>> findAll() {
-        return ResponseEntity.status(HttpStatus.OK).body(productService.getAllProducts());
+    public ResponseEntity<CollectionModel<EntityModel<ProductResponseDTO>>> findAll() {
+        List<EntityModel<ProductResponseDTO>> entityModels = this.productService.getAllProducts()
+                .stream()
+                .map(productModelAssembler::toModel)
+                .toList();
+
+        CollectionModel<EntityModel<ProductResponseDTO>> collectionModel = CollectionModel.of(entityModels);
+        return ResponseEntity.status(HttpStatus.OK).body(collectionModel);
     }
 
+
+    //Buscar Producto por el ID
     @GetMapping("/{id}")
     @Operation(
             summary = "Búsqueda de producto por ID",
@@ -63,7 +83,7 @@ public class ProductController {
                     description = "Producto no encontrado"
             )
     })
-    public ResponseEntity<ProductResponseDTO> findById(
+    public ResponseEntity<EntityModel<ProductResponseDTO>> findById(
             @Parameter(
                     description = "ID del producto a buscar",
                     required = true,
@@ -71,9 +91,12 @@ public class ProductController {
             )
             @PathVariable Long id
     ) {
-        return ResponseEntity.status(HttpStatus.OK).body(productService.getProductById(id));
+        EntityModel<ProductResponseDTO> entityModel = this.productModelAssembler.toModel(this.productService.getProductById(id));
+        return ResponseEntity.status(HttpStatus.OK).body(entityModel);
     }
 
+
+    //Registrar nuevo Producto
     @PostMapping
     @Operation(
             summary = "Crear producto",
@@ -91,20 +114,27 @@ public class ProductController {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "201",
-                    description = "Producto creado correctamente"
+                    description = "Producto creado correctamente",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ProductResponseDTO.class)
+                    )
             ),
             @ApiResponse(
                     responseCode = "400",
                     description = "Datos inválidos"
             )
     })
-    public ResponseEntity<ProductResponseDTO> save(
+    public ResponseEntity<EntityModel<ProductResponseDTO>> save(
             @Valid @RequestBody ProductRequestDTO requestDTO
     ) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(productService.createProduct(requestDTO));
+        ProductResponseDTO productCreate = this.productService.createProduct(requestDTO);
+        EntityModel<ProductResponseDTO> entityModel = this.productModelAssembler.toModel(productCreate);
+        return ResponseEntity.status(HttpStatus.CREATED).body(entityModel);
     }
 
+
+    //Desactivar un producto
     @PatchMapping("/{id}")
     @Operation(
             summary = "Desactivar producto",
@@ -120,7 +150,7 @@ public class ProductController {
                     description = "Producto no encontrado"
             )
     })
-    public ResponseEntity<ProductResponseDTO> deactivate(
+    public ResponseEntity<Void> deactivate(
             @Parameter(
                     description = "ID del producto a desactivar",
                     required = true,
@@ -128,10 +158,12 @@ public class ProductController {
             )
             @PathVariable Long id
     ) {
-        productService.deactivateProduct(id);
+        this.productService.deactivateProduct(id);
         return ResponseEntity.status(HttpStatus.OK).build();
     }
 
+
+    //Actualizar un Producto
     @PatchMapping("/{id}/update")
     @Operation(
             summary = "Actualizar producto",
@@ -140,7 +172,11 @@ public class ProductController {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
-                    description = "Producto actualizado correctamente"
+                    description = "Producto actualizado correctamente",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ProductResponseDTO.class)
+                    )
             ),
             @ApiResponse(
                     responseCode = "404",
@@ -151,17 +187,17 @@ public class ProductController {
                     description = "Datos inválidos"
             )
     })
-    public ResponseEntity<ProductResponseDTO> update(
+    public ResponseEntity<EntityModel<ProductResponseDTO>> update(
             @Parameter(
                     description = "ID del producto a actualizar",
                     required = true,
                     example = "1"
             )
             @PathVariable Long id,
-
             @Valid @RequestBody ProductRequestDTO requestDTO
     ) {
-        return ResponseEntity.status(HttpStatus.OK)
-                .body(productService.updateProduct(id, requestDTO));
+        ProductResponseDTO productUpdate = this.productService.updateProduct(id, requestDTO);
+        EntityModel<ProductResponseDTO> entityModel = this.productModelAssembler.toModel(productUpdate);
+        return ResponseEntity.status(HttpStatus.OK).body(entityModel);
     }
 }

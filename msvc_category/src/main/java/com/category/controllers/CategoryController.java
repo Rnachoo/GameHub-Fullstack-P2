@@ -5,7 +5,7 @@ import com.category.models.dtos.CategoryDetalleDTO;
 import com.category.models.dtos.CategorySaveDTO;
 import com.category.models.dtos.CategoryUpdateDescripcionDTO;
 import com.category.models.dtos.CategoryUpdateNombreDTO;
-import com.category.CategoryService;
+import com.category.services.CategoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;

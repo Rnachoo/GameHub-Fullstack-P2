@@ -1,5 +1,6 @@
 package com.promotion.controllers;
 
+import com.promotion.assemblers.PromotionModelAssembler;
 import com.promotion.models.dtos.PromotionAplicarDescuentoDTO;
 import com.promotion.models.dtos.PromotionDetalleDTO;
 import com.promotion.models.dtos.PromotionSaveDTO;
@@ -14,6 +15,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -33,6 +36,11 @@ public class PromotionController {
     @Autowired
     private PromotionService promotionService;
 
+    @Autowired
+    private PromotionModelAssembler promotionModelAssembler;
+
+
+    //Listar todas las promociones
     @GetMapping
     @Operation(
             summary = "Listado de todas las promociones",
@@ -40,12 +48,24 @@ public class PromotionController {
     )
     @ApiResponse(
             responseCode = "200",
-            description = "Operación exitosa"
+            description = "Operación exitosa",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = PromotionDetalleDTO.class)
+            )
     )
-    public ResponseEntity<List<PromotionDetalleDTO>> findAll() {
-        return ResponseEntity.status(HttpStatus.OK).body(promotionService.findAll());
+    public ResponseEntity<CollectionModel<EntityModel<PromotionDetalleDTO>>> findAll() {
+        List<EntityModel<PromotionDetalleDTO>> entityModels = this.promotionService.findAll()
+                .stream()
+                .map(promotionModelAssembler::toModel)
+                .toList();
+
+        CollectionModel<EntityModel<PromotionDetalleDTO>> collectionModel = CollectionModel.of(entityModels);
+        return ResponseEntity.status(HttpStatus.OK).body(collectionModel);
     }
 
+
+    //Buscar Promocion activa
     @GetMapping("/current")
     @Operation(
             summary = "Listado de promociones vigentes",
@@ -54,17 +74,29 @@ public class PromotionController {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
-                    description = "Promociones encontradas"
+                    description = "Promociones encontradas",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = PromotionDetalleDTO.class)
+                    )
             ),
             @ApiResponse(
                     responseCode = "404",
                     description = "No existen promociones vigentes"
             )
     })
-    public ResponseEntity<List<PromotionDetalleDTO>> findCurrent() {
-        return ResponseEntity.status(HttpStatus.OK).body(promotionService.findCurrent());
+    public ResponseEntity<CollectionModel<EntityModel<PromotionDetalleDTO>>> findCurrent() {
+        List<EntityModel<PromotionDetalleDTO>> entityModels = this.promotionService.findCurrent()
+                .stream()
+                .map(promotionModelAssembler::toModel)
+                .toList();
+
+        CollectionModel<EntityModel<PromotionDetalleDTO>> collectionModel = CollectionModel.of(entityModels);
+        return ResponseEntity.status(HttpStatus.OK).body(collectionModel);
     }
 
+
+    //Buscar promocion por ID
     @GetMapping("/{id}")
     @Operation(
             summary = "Búsqueda de promoción por ID",
@@ -84,7 +116,7 @@ public class PromotionController {
                     description = "Promoción no encontrada"
             )
     })
-    public ResponseEntity<PromotionDetalleDTO> findById(
+    public ResponseEntity<EntityModel<PromotionDetalleDTO>> findById(
             @Parameter(
                     description = "ID de la promoción a buscar",
                     required = true,
@@ -92,9 +124,12 @@ public class PromotionController {
             )
             @PathVariable Long id
     ) {
-        return ResponseEntity.status(HttpStatus.OK).body(promotionService.findById(id));
+        EntityModel<PromotionDetalleDTO> entityModel = this.promotionModelAssembler.toModel(this.promotionService.findById(id));
+        return ResponseEntity.status(HttpStatus.OK).body(entityModel);
     }
 
+
+    //buscar Promocion por Codigo
     @GetMapping("/codigo/{codigo}")
     @Operation(
             summary = "Búsqueda de promoción por código",
@@ -114,7 +149,7 @@ public class PromotionController {
                     description = "Código promocional no encontrado"
             )
     })
-    public ResponseEntity<PromotionDetalleDTO> findByCodigo(
+    public ResponseEntity<EntityModel<PromotionDetalleDTO>> findByCodigo(
             @Parameter(
                     description = "Código de la promoción",
                     required = true,
@@ -122,9 +157,12 @@ public class PromotionController {
             )
             @PathVariable String codigo
     ) {
-        return ResponseEntity.status(HttpStatus.OK).body(promotionService.findByCodigo(codigo));
+        EntityModel<PromotionDetalleDTO> entityModel = this.promotionModelAssembler.toModel(this.promotionService.findByCodigo(codigo));
+        return ResponseEntity.status(HttpStatus.OK).body(entityModel);
     }
 
+
+    //Registrar una nueva promoción
     @PostMapping
     @Operation(
             summary = "Crear promoción",
@@ -142,20 +180,27 @@ public class PromotionController {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "201",
-                    description = "Promoción creada correctamente"
+                    description = "Promoción creada correctamente",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = PromotionDetalleDTO.class)
+                    )
             ),
             @ApiResponse(
                     responseCode = "400",
                     description = "Datos inválidos"
             )
     })
-    public ResponseEntity<PromotionDetalleDTO> save(
+    public ResponseEntity<EntityModel<PromotionDetalleDTO>> save(
             @Valid @RequestBody PromotionSaveDTO promotionSaveDTO
     ) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(promotionService.save(promotionSaveDTO));
+        PromotionDetalleDTO promotionCreate = this.promotionService.save(promotionSaveDTO);
+        EntityModel<PromotionDetalleDTO> entityModel = this.promotionModelAssembler.toModel(promotionCreate);
+        return ResponseEntity.status(HttpStatus.CREATED).body(entityModel);
     }
 
+
+    //Desactivar una promoción por el ID
     @PatchMapping("/{id}")
     @Operation(
             summary = "Desactivar promoción",
@@ -164,14 +209,18 @@ public class PromotionController {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
-                    description = "Promoción desactivada correctamente"
+                    description = "Promoción desactivada correctamente",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = PromotionDetalleDTO.class)
+                    )
             ),
             @ApiResponse(
                     responseCode = "404",
                     description = "Promoción no encontrada"
             )
     })
-    public ResponseEntity<PromotionDetalleDTO> desactiveById(
+    public ResponseEntity<EntityModel<PromotionDetalleDTO>> desactiveById(
             @Parameter(
                     description = "ID de la promoción a desactivar",
                     required = true,
@@ -179,10 +228,13 @@ public class PromotionController {
             )
             @PathVariable Long id
     ) {
-        PromotionDetalleDTO promotion = promotionService.desactiveById(id);
-        return ResponseEntity.ok(promotion);
+        PromotionDetalleDTO promotion = this.promotionService.desactiveById(id);
+        EntityModel<PromotionDetalleDTO> entityModel = this.promotionModelAssembler.toModel(promotion);
+        return ResponseEntity.status(HttpStatus.OK).body(entityModel);
     }
 
+
+    //Actualizar la fecha de una promoción
     @PatchMapping("/{id}/date")
     @Operation(
             summary = "Actualizar fechas de promoción",
@@ -191,14 +243,18 @@ public class PromotionController {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
-                    description = "Fechas actualizadas correctamente"
+                    description = "Fechas actualizadas correctamente",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = PromotionDetalleDTO.class)
+                    )
             ),
             @ApiResponse(
                     responseCode = "404",
                     description = "Promoción no encontrada"
             )
     })
-    public ResponseEntity<PromotionDetalleDTO> updateDate(
+    public ResponseEntity<EntityModel<PromotionDetalleDTO>> updateDate(
             @Parameter(
                     description = "ID de la promoción",
                     required = true,
@@ -207,10 +263,13 @@ public class PromotionController {
             @PathVariable Long id,
             @Valid @RequestBody PromotionUpdateDateDTO promotionUpdateDateDTO
     ) {
-        return ResponseEntity.status(HttpStatus.OK)
-                .body(promotionService.updateDate(id, promotionUpdateDateDTO));
+        PromotionDetalleDTO promotionUpdate = this.promotionService.updateDate(id, promotionUpdateDateDTO);
+        EntityModel<PromotionDetalleDTO> entityModel = this.promotionModelAssembler.toModel(promotionUpdate);
+        return ResponseEntity.status(HttpStatus.OK).body(entityModel);
     }
 
+
+    //Aplicar uan promoción en una orden
     @PostMapping("/{codigo}/aplicar")
     @Operation(
             summary = "Aplicar promoción a una orden",
@@ -219,7 +278,11 @@ public class PromotionController {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
-                    description = "Promoción aplicada correctamente"
+                    description = "Promoción aplicada correctamente",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = PromotionDetalleDTO.class)
+                    )
             ),
             @ApiResponse(
                     responseCode = "400",
@@ -230,7 +293,7 @@ public class PromotionController {
                     description = "Promoción no encontrada"
             )
     })
-    public ResponseEntity<PromotionDetalleDTO> aplicarPromocion(
+    public ResponseEntity<EntityModel<PromotionDetalleDTO>> aplicarPromocion(
             @Parameter(
                     description = "Código promocional",
                     required = true,
@@ -248,13 +311,8 @@ public class PromotionController {
             @RequestParam("totalOrden") Double totalOrden
     ) {
 
-        PromotionDetalleDTO promotionAplicada =
-                promotionService.aplicarPromocion(
-                        codigo,
-                        aplicarDescuentoDTO,
-                        totalOrden
-                );
-
-        return ResponseEntity.ok(promotionAplicada);
+        PromotionDetalleDTO promotionAplicada = this.promotionService.aplicarPromocion(codigo, aplicarDescuentoDTO, totalOrden);
+        EntityModel<PromotionDetalleDTO> entityModel = this.promotionModelAssembler.toModel(promotionAplicada);
+        return ResponseEntity.status(HttpStatus.OK).body(entityModel);
     }
 }

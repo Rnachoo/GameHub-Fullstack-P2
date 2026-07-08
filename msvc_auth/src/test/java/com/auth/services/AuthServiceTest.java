@@ -1,6 +1,5 @@
-package com.product.services;
+package com.auth.services;
 
-import com.auth.services.AuthServiceImpl;
 import com.auth.clients.UserClient;
 import com.auth.exceptions.AuthException;
 import com.auth.models.Auth;

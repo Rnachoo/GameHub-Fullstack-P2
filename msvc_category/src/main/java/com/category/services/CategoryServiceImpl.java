@@ -1,4 +1,4 @@
-package com.category;
+package com.category.services;
 
 import com.category.exceptions.CategoryException;
 import com.category.models.Category;

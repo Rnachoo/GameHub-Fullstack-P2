@@ -1,4 +1,4 @@
-package com.category;
+package com.category.services;
 
 import com.category.models.dtos.CategoryDetalleDTO;
 import com.category.models.dtos.CategorySaveDTO;
